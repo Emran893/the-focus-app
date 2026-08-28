@@ -27,17 +27,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # Dummy web assets directory banana zaroori hai taaki Capacitor error na de
+      - name: Create Dummy Web Assets Directory
+        run: mkdir -p dist && echo "<html><body>Lovable Wrapper</body></html>" > dist/index.html
+
+      # Aapke project ke packages aur hmare dwara add kiya gaya typescript install hoga
       - name: Install dependencies
         run: npm install
 
-      - name: Install Capacitor CLI
-        run: npm install -g @capacitor/cli
-
-      - name: Add Android platform
-        run: npx cap add android
-
-      - name: Sync Capacitor
-        run: npx cap sync android
+      # Npx cap add aur sync ko sahi sequence me chalane ke liye setup script
+      - name: Initialize Android Platform
+        run: |
+          npx cap add android || echo "Android folder might already exist or skipped"
+          npx cap sync android
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
