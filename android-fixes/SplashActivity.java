@@ -17,7 +17,7 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Full screen — no status bar
+        // Full immersive screen
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN |
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -27,71 +27,61 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
 
         ImageView logo = findViewById(R.id.splash_logo);
-        FrameLayout root = (FrameLayout) logo.getParent();
-
-        startAnimation(logo, root);
+        startAnimation(logo);
     }
 
-    private void startAnimation(ImageView logo, FrameLayout root) {
+    private void startAnimation(ImageView logo) {
 
-        // ── Phase 1: Fade in + Flip (white bg, logo appears) ──
+        // ── Phase 1: Logo appears with flip (scaleX 0 → 1) ──
         ObjectAnimator fadeIn = ObjectAnimator.ofFloat(logo, "alpha", 0f, 1f);
-        fadeIn.setDuration(250);
-        fadeIn.setStartDelay(200);
+        fadeIn.setDuration(300);
+        fadeIn.setStartDelay(300);
 
-        // Flip: scaleX 0 → 1 with overshoot (like card flip)
-        ObjectAnimator flipX = ObjectAnimator.ofFloat(logo, "scaleX", 0f, 1f);
-        flipX.setDuration(550);
-        flipX.setStartDelay(200);
-        flipX.setInterpolator(new OvershootInterpolator(2f));
+        ObjectAnimator flipIn = ObjectAnimator.ofFloat(logo, "scaleX", 0f, 1f);
+        flipIn.setDuration(600);
+        flipIn.setStartDelay(300);
+        flipIn.setInterpolator(new OvershootInterpolator(1.8f));
 
-        // Slight bounce on Y too
-        ObjectAnimator scaleY1 = ObjectAnimator.ofFloat(logo, "scaleY", 0.8f, 1f);
-        scaleY1.setDuration(400);
-        scaleY1.setStartDelay(300);
-        scaleY1.setInterpolator(new OvershootInterpolator(1.5f));
+        ObjectAnimator scaleYIn = ObjectAnimator.ofFloat(logo, "scaleY", 0.85f, 1f);
+        scaleYIn.setDuration(500);
+        scaleYIn.setStartDelay(350);
+        scaleYIn.setInterpolator(new OvershootInterpolator(1.5f));
 
         AnimatorSet phase1 = new AnimatorSet();
-        phase1.playTogether(fadeIn, flipX, scaleY1);
+        phase1.playTogether(fadeIn, flipIn, scaleYIn);
 
-        // ── Phase 2: Hold for a moment ──
-        // (handled by delay in phase3)
+        // ── Phase 2: Logo holds for 1 second (do nothing — just delay) ──
 
-        // ── Phase 3: Zoom toward user, white fades ──
-        // Logo zooms to ~3x (near the screen edges but not full)
-        ObjectAnimator zoomX = ObjectAnimator.ofFloat(logo, "scaleX", 1f, 3.5f);
-        zoomX.setDuration(500);
-        zoomX.setInterpolator(new AccelerateInterpolator(2f));
+        // ── Phase 3: Slow zoom to full screen ──
+        // Scale from 1x to 25x — logo covers full screen smoothly
+        ObjectAnimator zoomX = ObjectAnimator.ofFloat(logo, "scaleX", 1f, 25f);
+        zoomX.setDuration(1200);
+        zoomX.setInterpolator(new AccelerateInterpolator(1.5f));
 
-        ObjectAnimator zoomY = ObjectAnimator.ofFloat(logo, "scaleY", 1f, 3.5f);
-        zoomY.setDuration(500);
-        zoomY.setInterpolator(new AccelerateInterpolator(2f));
+        ObjectAnimator zoomY = ObjectAnimator.ofFloat(logo, "scaleY", 1f, 25f);
+        zoomY.setDuration(1200);
+        zoomY.setInterpolator(new AccelerateInterpolator(1.5f));
 
-        // Fade logo out during zoom
-        ObjectAnimator logoFade = ObjectAnimator.ofFloat(logo, "alpha", 1f, 0f);
-        logoFade.setDuration(350);
-        logoFade.setStartDelay(200);
-
-        // Fade background to transparent/white
-        ObjectAnimator bgFade = ObjectAnimator.ofFloat(root, "alpha", 1f, 0f);
-        bgFade.setDuration(400);
-        bgFade.setStartDelay(200);
+        // Logo fades out near end so app transition is seamless
+        ObjectAnimator fadeOut = ObjectAnimator.ofFloat(logo, "alpha", 1f, 0f);
+        fadeOut.setDuration(400);
+        fadeOut.setStartDelay(900);
 
         AnimatorSet phase3 = new AnimatorSet();
-        phase3.playTogether(zoomX, zoomY, logoFade, bgFade);
-        phase3.setStartDelay(900); // Wait after flip
+        phase3.playTogether(zoomX, zoomY, fadeOut);
+        phase3.setStartDelay(1100); // Hold after flip
 
         AnimatorSet full = new AnimatorSet();
         full.playSequentially(phase1, phase3);
         full.start();
 
-        // Launch main app after animation completes
+        // Launch main app — seamlessly after zoom fills screen
         logo.postDelayed(() -> {
             Intent intent = new Intent(SplashActivity.this, MainActivity.class);
             startActivity(intent);
-            // Smooth crossfade into app
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+            // No transition animation — red screen fills both, seamless
+            overridePendingTransition(0, 0);
             finish();
-        }, 1700);
+        }, 2600);
     }
 }
