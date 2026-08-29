@@ -59,24 +59,6 @@ jobs:
           cp android-fixes/res/anim/logo_flip.xml android/app/src/main/res/anim/
           cp android-fixes/res/anim/logo_zoom.xml android/app/src/main/res/anim/
 
-      - name: Copy app icons
-        run: |
-          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xxhdpi
-          mkdir -p android/app/src/main/res/mipmap-xhdpi
-          mkdir -p android/app/src/main/res/mipmap-hdpi
-          mkdir -p android/app/src/main/res/mipmap-mdpi
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-
       - name: Update AndroidManifest for SplashActivity
         run: |
           python3 << 'PYEOF'
@@ -102,8 +84,28 @@ jobs:
           content = content.replace('</application>', splash + '\n    </application>')
           with open(manifest_path, 'w') as f:
               f.write(content)
-          print('Manifest updated successfully')
+          print('Manifest updated')
           PYEOF
+
+      - name: Copy app icons (LAST - overwrite Capacitor defaults)
+        run: |
+          for dir in android/app/src/main/res/mipmap-*/; do
+            rm -f "$dir/ic_launcher.png"
+            rm -f "$dir/ic_launcher_round.png"
+            rm -f "$dir/ic_launcher_foreground.png"
+          done
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          echo "Icons replaced successfully"
+          ls android/app/src/main/res/mipmap-xxxhdpi/
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
