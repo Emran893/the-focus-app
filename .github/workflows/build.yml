@@ -27,19 +27,80 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # Dummy web assets directory banana zaroori hai taaki Capacitor error na de
-      - name: Create Dummy Web Assets Directory
-        run: mkdir -p dist && echo "<html><body>Lovable Wrapper</body></html>" > dist/index.html
-
-      # Aapke project ke packages aur hmare dwara add kiya gaya typescript install hoga
       - name: Install dependencies
         run: npm install
 
-      # Npx cap add aur sync ko sahi sequence me chalane ke liye setup script
-      - name: Initialize Android Platform
+      - name: Install Capacitor CLI
+        run: npm install -g @capacitor/cli
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Copy MainActivity
+        run: cp android-fixes/MainActivity.java android/app/src/main/java/com/thefocuslive/app/MainActivity.java
+
+      - name: Copy SplashActivity
+        run: cp android-fixes/SplashActivity.java android/app/src/main/java/com/thefocuslive/app/SplashActivity.java
+
+      - name: Copy splash layout
         run: |
-          npx cap add android || echo "Android folder might already exist or skipped"
-          npx cap sync android
+          mkdir -p android/app/src/main/res/layout
+          cp android-fixes/res/layout/activity_splash.xml android/app/src/main/res/layout/
+
+      - name: Copy animations
+        run: |
+          mkdir -p android/app/src/main/res/anim
+          cp android-fixes/res/anim/logo_flip.xml android/app/src/main/res/anim/
+          cp android-fixes/res/anim/logo_zoom.xml android/app/src/main/res/anim/
+
+      - name: Copy app icons
+        run: |
+          mkdir -p android/app/src/main/res/mipmap-xxxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xxhdpi
+          mkdir -p android/app/src/main/res/mipmap-xhdpi
+          mkdir -p android/app/src/main/res/mipmap-hdpi
+          mkdir -p android/app/src/main/res/mipmap-mdpi
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+
+      - name: Update AndroidManifest for SplashActivity
+        run: |
+          python3 << 'PYEOF'
+          import re
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest_path, 'r') as f:
+              content = f.read()
+          splash = '''
+              <activity
+                  android:name=".SplashActivity"
+                  android:exported="true"
+                  android:theme="@style/AppTheme.NoActionBar">
+                  <intent-filter>
+                      <action android:name="android.intent.action.MAIN" />
+                      <category android:name="android.intent.category.LAUNCHER" />
+                  </intent-filter>
+              </activity>'''
+          content = re.sub(
+              r'<intent-filter>\s*<action android:name="android\.intent\.action\.MAIN"[^>]*/>\s*<category android:name="android\.intent\.category\.LAUNCHER"[^>]*/>\s*</intent-filter>',
+              '',
+              content
+          )
+          content = content.replace('</application>', splash + '\n    </application>')
+          with open(manifest_path, 'w') as f:
+              f.write(content)
+          print('Manifest updated')
+          PYEOF
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
@@ -53,5 +114,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: The-Focus-Live-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/src/main/res/mipmap-hdpi/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
