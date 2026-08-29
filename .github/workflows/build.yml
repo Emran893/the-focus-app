@@ -59,11 +59,12 @@ jobs:
           cp android-fixes/res/anim/logo_flip.xml android/app/src/main/res/anim/
           cp android-fixes/res/anim/logo_zoom.xml android/app/src/main/res/anim/
 
-      - name: Fix icons - all sizes + foreground
+      - name: Fix icons - high quality 512px
         run: |
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+          # Use 512px icon for ALL mipmap sizes — Android scales down, quality stays sharp
+          cp assets/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp assets/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp assets/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
           cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
           cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
           cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
@@ -76,7 +77,7 @@ jobs:
           cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
-          # Update background color to red
+          # Update background to red
           sed -i 's/#[0-9a-fA-F]*/\#CC0000/' android/app/src/main/res/values/ic_launcher_background.xml
           echo "Icons done"
 
