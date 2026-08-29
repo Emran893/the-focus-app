@@ -59,6 +59,29 @@ jobs:
           cp android-fixes/res/anim/logo_flip.xml android/app/src/main/res/anim/
           cp android-fixes/res/anim/logo_zoom.xml android/app/src/main/res/anim/
 
+      - name: Fix icons
+        run: |
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
+          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
+          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
+          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
+          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
+
+          # Update existing ic_launcher_background.xml color to red
+          sed -i 's/#[0-9a-fA-F]*/\#CC0000/' android/app/src/main/res/values/ic_launcher_background.xml
+
+          echo "Icons fixed"
+
       - name: Update AndroidManifest for SplashActivity
         run: |
           python3 << 'PYEOF'
@@ -86,51 +109,6 @@ jobs:
               f.write(content)
           print('Manifest updated')
           PYEOF
-
-      - name: Fix icons - replace adaptive icons with plain PNG
-        run: |
-          # Copy our logo to all mipmap sizes
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
-          cp assets/icon_192.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
-          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png
-          cp assets/icon_144.png android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png
-          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png
-          cp assets/icon_96.png  android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png
-          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png
-          cp assets/icon_72.png  android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png
-          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
-          cp assets/icon_48.png  android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
-
-          # Replace adaptive icon XMLs with simple PNG references (fixes ic_launcher_foreground not found error)
-          mkdir -p android/app/src/main/res/mipmap-anydpi-v26
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml << 'XMLEOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/ic_launcher_background"/>
-              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-          </adaptive-icon>
-          XMLEOF
-
-          cat > android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml << 'XMLEOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-              <background android:drawable="@color/ic_launcher_background"/>
-              <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-          </adaptive-icon>
-          XMLEOF
-
-          # Make sure color resource exists
-          mkdir -p android/app/src/main/res/values
-          if ! grep -q "ic_launcher_background" android/app/src/main/res/values/colors.xml 2>/dev/null; then
-            echo '<resources><color name="ic_launcher_background">#CC0000</color></resources>' > android/app/src/main/res/values/ic_launcher_colors.xml
-          fi
-
-          echo "Icons fixed successfully"
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
