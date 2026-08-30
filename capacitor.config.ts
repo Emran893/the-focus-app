@@ -5,36 +5,35 @@ const config: CapacitorConfig = {
   appName: 'The Focus Live',
   webDir: 'dist',
   server: {
-    // Live URL — app always shows latest content
-    // Posts & YouTube videos auto-update without rebuilding app
     url: 'https://focus-site-maker.lovable.app',
     cleartext: false,
     androidScheme: 'https',
+    // Allow navigation within the app
+    allowNavigation: ['*.lovable.app', '*.thefocuslive.com'],
   },
   android: {
     allowMixedContent: false,
-    backgroundColor: '#0f0f0f',
+    backgroundColor: '#1a0000',
     captureInput: true,
     webContentsDebuggingEnabled: false,
+    overrideUserAgent: 'The Focus Live App/1.0 Android',
+    // Prevent white flash on load
+    initialFocus: false,
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 0,
       launchAutoHide: true,
-      backgroundColor: '#cc0000',
+      backgroundColor: '#1a0000',
       androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
       showSpinner: false,
       splashFullScreen: true,
       splashImmersive: true,
     },
     StatusBar: {
       style: 'Dark',
-      backgroundColor: '#cc0000',
+      backgroundColor: '#1a0000',
       overlaysWebView: false,
-    },
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
     },
   },
 };
