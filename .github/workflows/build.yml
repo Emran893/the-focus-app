@@ -55,15 +55,13 @@ jobs:
       - name: Copy animations
         run: |
           mkdir -p android/app/src/main/res/anim
-          cp android-fixes/res/anim/logo_flip.xml android/app/src/main/res/anim/ 2>/dev/null || true
-          cp android-fixes/res/anim/logo_zoom.xml android/app/src/main/res/anim/ 2>/dev/null || true
+          cp android-fixes/res/anim/slide_in_right.xml android/app/src/main/res/anim/
 
-      - name: Copy splash logos to drawable
+      - name: Copy boot video to raw resources
         run: |
-          mkdir -p android/app/src/main/res/drawable
-          cp assets/splash_logo_f.png    android/app/src/main/res/drawable/splash_logo_f.png
-          cp assets/splash_logo_full.png android/app/src/main/res/drawable/splash_logo_full.png
-          echo "Splash logos copied"
+          mkdir -p android/app/src/main/res/raw
+          cp assets/boot_video.mp4 android/app/src/main/res/raw/boot_video.mp4
+          echo "Boot video copied: $(du -sh android/app/src/main/res/raw/boot_video.mp4)"
 
       - name: Fix icons - high quality
         run: |
@@ -82,39 +80,37 @@ jobs:
           cp assets/icon_48.png     android/app/src/main/res/mipmap-mdpi/ic_launcher.png
           cp assets/icon_48.png     android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           cp assets/icon_48.png     android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
-          sed -i 's/#[0-9a-fA-F]*/\#1a0000/' android/app/src/main/res/values/ic_launcher_background.xml
+          sed -i 's/#[0-9a-fA-F]*/\#000000/' android/app/src/main/res/values/ic_launcher_background.xml
           echo "Icons done"
 
       - name: Update AndroidManifest for SplashActivity
         run: |
           python3 << 'PYEOF'
           import re
-          manifest_path = 'android/app/src/main/AndroidManifest.xml'
-          with open(manifest_path, 'r') as f:
-              content = f.read()
-          if 'SplashActivity' not in content:
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path) as f:
+              c = f.read()
+          if 'SplashActivity' not in c:
               splash = '''
               <activity
                   android:name=".SplashActivity"
                   android:exported="true"
                   android:screenOrientation="portrait"
+                  android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
                   android:theme="@style/AppTheme.NoActionBar">
                   <intent-filter>
                       <action android:name="android.intent.action.MAIN" />
                       <category android:name="android.intent.category.LAUNCHER" />
                   </intent-filter>
               </activity>'''
-              content = re.sub(
+              c = re.sub(
                   r'<intent-filter>\s*<action android:name="android\.intent\.action\.MAIN"[^>]*/>\s*<category android:name="android\.intent\.category\.LAUNCHER"[^>]*/>\s*</intent-filter>',
-                  '',
-                  content
+                  '', c
               )
-              content = content.replace('</application>', splash + '\n    </application>')
-              with open(manifest_path, 'w') as f:
-                  f.write(content)
+              c = c.replace('</application>', splash + '\n    </application>')
+              with open(path, 'w') as f:
+                  f.write(c)
               print('Manifest updated')
-          else:
-              print('SplashActivity already in manifest')
           PYEOF
 
       - name: Make gradlew executable
