@@ -47,23 +47,21 @@ jobs:
           cp android-fixes/MainActivity.java android/app/src/main/java/com/thefocuslive/app/MainActivity.java
           cp android-fixes/SplashActivity.java android/app/src/main/java/com/thefocuslive/app/SplashActivity.java
 
-      - name: Copy splash layout
+      - name: Copy layouts and animations
         run: |
           mkdir -p android/app/src/main/res/layout
-          cp android-fixes/res/layout/activity_splash.xml android/app/src/main/res/layout/
-
-      - name: Copy animations
-        run: |
           mkdir -p android/app/src/main/res/anim
-          cp android-fixes/res/anim/slide_in_right.xml android/app/src/main/res/anim/
+          cp android-fixes/res/layout/activity_splash.xml android/app/src/main/res/layout/
+          cp android-fixes/res/anim/slide_in_right.xml    android/app/src/main/res/anim/
+          cp android-fixes/res/anim/fade_out_splash.xml   android/app/src/main/res/anim/
 
-      - name: Copy boot video to raw resources
+      - name: Copy boot video
         run: |
           mkdir -p android/app/src/main/res/raw
           cp assets/boot_video.mp4 android/app/src/main/res/raw/boot_video.mp4
-          echo "Boot video copied: $(du -sh android/app/src/main/res/raw/boot_video.mp4)"
+          echo "Boot video: $(du -sh android/app/src/main/res/raw/boot_video.mp4)"
 
-      - name: Fix icons - high quality
+      - name: Fix icons
         run: |
           cp assets/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           cp assets/ic_launcher.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
@@ -81,9 +79,8 @@ jobs:
           cp assets/icon_48.png     android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png
           cp assets/icon_48.png     android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
           sed -i 's/#[0-9a-fA-F]*/\#000000/' android/app/src/main/res/values/ic_launcher_background.xml
-          echo "Icons done"
 
-      - name: Update AndroidManifest for SplashActivity
+      - name: Update AndroidManifest
         run: |
           python3 << 'PYEOF'
           import re
@@ -110,16 +107,14 @@ jobs:
               c = c.replace('</application>', splash + '\n    </application>')
               with open(path, 'w') as f:
                   f.write(c)
-              print('Manifest updated')
+              print('Done')
           PYEOF
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
-      - name: Build Debug APK
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon
+      - name: Build APK
+        run: cd android && ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
