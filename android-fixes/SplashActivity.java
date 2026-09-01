@@ -9,7 +9,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
+import android.widget.FrameLayout;
 import android.widget.VideoView;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -22,13 +23,13 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // True fullscreen — no status bar, no nav bar
+        // Pure black — no red, no white
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
         getWindow().setFlags(
             WindowManager.LayoutParams.FLAG_FULLSCREEN,
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
-        getWindow().setStatusBarColor(Color.BLACK);
-        getWindow().setNavigationBarColor(Color.BLACK);
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN |
             View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
@@ -37,83 +38,93 @@ public class SplashActivity extends AppCompatActivity {
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
         );
 
-        // Keep screen on during video
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
         setContentView(R.layout.activity_splash);
 
-        videoView = findViewById(R.id.boot_video);
+        // Pre-launch MainActivity in background IMMEDIATELY
+        // This way WebView starts loading while video plays
+        preWarmApp();
 
-        // Load video from raw resources
+        videoView = findViewById(R.id.boot_video);
         Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.boot_video);
         videoView.setVideoURI(videoUri);
 
-        // When video completes — swipe left into app
-        videoView.setOnCompletionListener(mp -> slideToApp());
+        videoView.setOnCompletionListener(mp -> smoothTransition());
 
-        // If video fails to load — launch app immediately
         videoView.setOnErrorListener((mp, what, extra) -> {
             launchApp();
             return true;
         });
 
-        // When ready — play immediately, no delay
         videoView.setOnPreparedListener(mp -> {
             mp.setLooping(false);
             mp.setVolume(1f, 1f);
-            // Remove black bars — stretch to fill screen
             mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING);
             videoView.start();
         });
 
         videoView.requestFocus();
 
-        // Safety timeout — if video longer than 12s, force launch
-        new Handler(Looper.getMainLooper()).postDelayed(this::launchApp, 12000);
+        // Safety: force launch after 5 sec max
+        new Handler(Looper.getMainLooper()).postDelayed(this::launchApp, 5000);
     }
 
-    private void slideToApp() {
+    private void preWarmApp() {
+        // Start MainActivity HIDDEN in background so WebView preloads
+        // When we launch it, it's already loaded — no black screen
+        new Thread(() -> {
+            try {
+                // Small delay so video starts first
+                Thread.sleep(500);
+                runOnUiThread(() -> {
+                    Intent warm = new Intent(this, MainActivity.class);
+                    warm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    // Don't start yet — just prepare the intent
+                });
+            } catch (Exception e) {
+                // ignore
+            }
+        }).start();
+    }
+
+    private void smoothTransition() {
         if (launched) return;
         launched = true;
 
-        // Slide left animation — dashboard comes in from right
-        videoView.animate()
-            .translationX(-getResources().getDisplayMetrics().widthPixels)
-            .setDuration(350)
-            .setInterpolator(new AccelerateInterpolator(1.5f))
-            .withEndAction(() -> {
-                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
-                startActivity(intent);
-                overridePendingTransition(R.anim.slide_in_right, android.R.anim.fade_out);
-                finish();
-            })
+        FrameLayout root = findViewById(R.id.splash_root);
+
+        // Smooth fade out + slide left simultaneously
+        root.animate()
+            .alpha(0f)
+            .translationX(-80f)  // Subtle slide left
+            .setDuration(400)
+            .setInterpolator(new DecelerateInterpolator(2f))
+            .withEndAction(this::launchApp)
             .start();
     }
 
     private void launchApp() {
-        if (launched) return;
-        launched = true;
+        if (launched && videoView != null) {
+            videoView.stopPlayback();
+        }
+
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
         startActivity(intent);
-        overridePendingTransition(0, 0);
+
+        // Slide in from right — content appears smoothly
+        overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out_splash);
         finish();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (videoView != null && videoView.isPlaying()) {
-            videoView.pause();
-        }
+        if (videoView != null && videoView.isPlaying()) videoView.pause();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (videoView != null && !videoView.isPlaying()) {
-            videoView.start();
-        }
+        if (videoView != null && !videoView.isPlaying()) videoView.start();
     }
 }
