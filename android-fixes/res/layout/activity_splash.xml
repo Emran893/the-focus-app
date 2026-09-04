@@ -6,6 +6,8 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
+    <!-- Hidden WebView added here programmatically (below VideoView in z-order) -->
+
     <VideoView
         android:id="@+id/boot_video"
         android:layout_width="match_parent"

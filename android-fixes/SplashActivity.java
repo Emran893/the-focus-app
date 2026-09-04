@@ -1,6 +1,7 @@
 package com.thefocuslive.app;
 
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -10,6 +11,10 @@ import android.os.Looper;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.VideoView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -18,12 +23,13 @@ public class SplashActivity extends AppCompatActivity {
 
     private boolean launched = false;
     private VideoView videoView;
+    private WebView hiddenWebView; // Preloads app in background
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Pure black — no red, no white
+        // Pure black everywhere
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
         getWindow().setFlags(
@@ -40,10 +46,10 @@ public class SplashActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_splash);
 
-        // Pre-launch MainActivity in background IMMEDIATELY
-        // This way WebView starts loading while video plays
-        preWarmApp();
+        // ── Start preloading dashboard IMMEDIATELY in hidden WebView ──
+        preloadDashboard();
 
+        // ── Play boot video ──
         videoView = findViewById(R.id.boot_video);
         Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.boot_video);
         videoView.setVideoURI(videoUri);
@@ -64,26 +70,49 @@ public class SplashActivity extends AppCompatActivity {
 
         videoView.requestFocus();
 
-        // Safety: force launch after 5 sec max
-        new Handler(Looper.getMainLooper()).postDelayed(this::launchApp, 5000);
+        // Safety timeout
+        new Handler(Looper.getMainLooper()).postDelayed(this::launchApp, 8000);
     }
 
-    private void preWarmApp() {
-        // Start MainActivity HIDDEN in background so WebView preloads
-        // When we launch it, it's already loaded — no black screen
-        new Thread(() -> {
-            try {
-                // Small delay so video starts first
-                Thread.sleep(500);
-                runOnUiThread(() -> {
-                    Intent warm = new Intent(this, MainActivity.class);
-                    warm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    // Don't start yet — just prepare the intent
-                });
-            } catch (Exception e) {
-                // ignore
+    private void preloadDashboard() {
+        // Create hidden WebView and load the URL in background
+        // When video ends, app is already loaded — zero black screen
+        hiddenWebView = new WebView(this);
+        hiddenWebView.setVisibility(View.INVISIBLE);
+        hiddenWebView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
+        WebSettings settings = hiddenWebView.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setDomStorageEnabled(true);
+        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setLoadWithOverviewMode(true);
+        settings.setUseWideViewPort(true);
+        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        settings.setAllowFileAccess(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
+
+        hiddenWebView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                // Page loaded — ready for instant show
             }
-        }).start();
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return false;
+            }
+        });
+
+        // Add to layout but invisible
+        FrameLayout root = findViewById(R.id.splash_root);
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        root.addView(hiddenWebView, params);
+
+        // Load URL — starts in background during video playback
+        hiddenWebView.loadUrl("https://focus-site-maker.lovable.app");
     }
 
     private void smoothTransition() {
@@ -92,26 +121,40 @@ public class SplashActivity extends AppCompatActivity {
 
         FrameLayout root = findViewById(R.id.splash_root);
 
-        // Smooth fade out + slide left simultaneously
-        root.animate()
-            .alpha(0f)
-            .translationX(-80f)  // Subtle slide left
-            .setDuration(400)
-            .setInterpolator(new DecelerateInterpolator(2f))
-            .withEndAction(this::launchApp)
-            .start();
+        // Make hidden WebView visible with fade — it's already loaded
+        if (hiddenWebView != null) {
+            hiddenWebView.setVisibility(View.VISIBLE);
+            hiddenWebView.setAlpha(0f);
+            hiddenWebView.animate()
+                .alpha(1f)
+                .setDuration(350)
+                .setInterpolator(new DecelerateInterpolator(2f))
+                .withEndAction(() -> {
+                    // Now launch real MainActivity
+                    // User sees loaded page, not black screen
+                    hiddenWebView.destroy();
+                    launchApp();
+                })
+                .start();
+
+            // Hide video
+            videoView.animate().alpha(0f).setDuration(300).start();
+        } else {
+            launchApp();
+        }
     }
 
     private void launchApp() {
-        if (launched && videoView != null) {
-            videoView.stopPlayback();
+        if (videoView != null) videoView.stopPlayback();
+        if (hiddenWebView != null) {
+            hiddenWebView.stopLoading();
+            hiddenWebView.destroy();
+            hiddenWebView = null;
         }
 
         Intent intent = new Intent(this, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
         startActivity(intent);
-
-        // Slide in from right — content appears smoothly
         overridePendingTransition(R.anim.slide_in_right, R.anim.fade_out_splash);
         finish();
     }
@@ -125,6 +168,15 @@ public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (videoView != null && !videoView.isPlaying()) videoView.start();
+        if (videoView != null && !videoView.isPlaying() && !launched) videoView.start();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (hiddenWebView != null) {
+            hiddenWebView.destroy();
+            hiddenWebView = null;
+        }
     }
 }
